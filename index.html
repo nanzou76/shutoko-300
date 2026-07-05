@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>首都高300円周回ルートプランナー Pro + AI (All-IC Engine)</title>
+    
+    <!-- PWA / モバイルアプリ化のためのメタタグ (iOS/Android全画面対応) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="首都高300円">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- アプリアイコン用の設定 (ホーム画面追加時) -->
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/0f172a/22d3ee?text=首都高300">
+    <link rel="icon" type="image/png" href="https://placehold.co/192x192/0f172a/22d3ee?text=首都高300">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Share Tech Mono for digital styling -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            /* ノッチや下部ホームバーのセーフエリアを確保 */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .digital-font {
+            font-family: 'Share Tech Mono', monospace;
+        }
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        /* Custom pulsing glow for AI features */
+        .ai-pulse {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+            animation: pulse-glow 2s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            0% {
+                box-shadow: 0 0 5px rgba(168, 85, 247, 0.3);
+                border-color: rgba(168, 85, 247, 0.4);
+            }
+            100% {
+                box-shadow: 0 0 18px rgba(168, 85, 247, 0.6);
+                border-color: rgba(168, 85, 247, 0.8);
+            }
+        }
+        /* PWA用のフルスクリーン最適化 */
+        @media (display-mode: standalone) {
+            header {
+                padding-top: 1.5rem !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-950 pb-12">
+
+    <!-- ヘッダーナビゲーション -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-br from-purple-600 to-cyan-500 text-slate-950 p-2 rounded-lg flex items-center justify-center font-extrabold shadow-lg shadow-cyan-500/15">
+                    <span class="text-sm tracking-tighter leading-none text-center font-mono text-white">首都高<br><span class="text-lg font-bold">300</span></span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                        300円周回プランナー <span class="text-xs text-cyan-400 font-mono bg-cyan-950 px-2 py-0.5 rounded-full border border-cyan-800">Pro + AI</span>
+                    </h1>
+                    <p class="text-[10px] text-slate-400">実在全IC対応・3大スタイル別動的ルート生成システム</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <!-- スマホインストール誘導ボタン -->
+                <button id="btn-pwa-install" class="hidden text-xs bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 shadow-lg shadow-cyan-500/20">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                    <span>アプリ化する</span>
+                </button>
+                <button id="btn-help" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
+                    <i class="fa-regular fa-circle-question text-cyan-400"></i>
+                    <span class="hidden sm:inline">ルール解説</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左側：入力＆コントロールパネル (5cols / 12) -->
+        <section class="lg:col-span-5 flex flex-col space-y-6">
+            
+            <!-- ルート設定カード -->
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-cyan-500 to-blue-600"></div>
+                
+                <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-map-location-dot text-cyan-400"></i>
+                    <span>出発インターチェンジ（入口）の選択</span>
+                </h2>
+
+                <!-- 検索＆フィルタリングUI -->
+                <div class="space-y-4">
+                    <!-- IC名でフリーワード検索 -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-semibold text-slate-400">IC名から探す（または自由に入力して新規作成）</label>
+                            <span class="text-[10px] text-cyan-400 animate-pulse"><i class="fa-solid fa-wand-magic-sparkles"></i> 自由に入力可能！</span>
+                        </div>
+                        <div class="relative">
+                            <input type="text" id="ic-search" placeholder="例: 木場, 浦安, 都筑, 西池袋, 本牧埠頭..." 
+                                   class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition"
+                                   oninput="filterICs()">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- もし検索結果にない場合の、カスタムIC動的生成パネル -->
+                    <div id="custom-ic-panel" class="hidden p-3.5 bg-gradient-to-r from-purple-950/40 to-slate-950 border border-purple-800/40 rounded-xl space-y-2.5">
+                        <p class="text-[11px] text-purple-300 font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-circle-info animate-bounce"></i>
+                            <span>お探しのICをプランナーに新規登録します！</span>
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] text-slate-500 font-bold">追加するIC名称</label>
+                                <input type="text" id="custom-ic-name" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-[9px] text-slate-500 font-bold">路線エリアカテゴリ</label>
+                                <select id="custom-ic-category" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 focus:outline-none">
+                                    <option value="ring">C1/C2 (環状・中央)</option>
+                                    <option value="radial">放射/湾岸 (1〜11号/B)</option>
+                                    <option value="kanagawa">神奈川 (K1〜K7)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="createNewCustomIC()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-1.5 rounded text-[10px] transition shadow-md shadow-purple-900/40 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>このICで300円周回ルートを動的生成する</span>
+                        </button>
+                    </div>
+
+                    <!-- エリア・路線カテゴリタブ -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1.5">エリア・路線カテゴリ</label>
+                        <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-850">
+                            <button id="tab-all" class="py-1.5 px-1 rounded-lg text-[10px] font-semibold text-center transition bg-slate-800 text-white" onclick="setFilterCategory('all')">
+                                すべて
+                            </button>
+                            <button id="tab-ring" class="py-1.5 px-1 rounded-lg text-[10px] font-semibold text-center transition text-slate-400 hover:text-slate-200" onclick="setFilterCategory('ring')">
+                                C1/C2
+                            </button>
+                            <button id="tab-radial" class="py-1.5 px-1 rounded-lg text-[10px] font-semibold text-center transition text-slate-400 hover:text-slate-200" onclick="setFilterCategory('radial')">
+                                放射/湾岸
+                            </button>
+                            <button id="tab-kanagawa" class="py-1.5 px-1 rounded-lg text-[10px] font-semibold text-center transition text-slate-400 hover:text-slate-200" onclick="setFilterCategory('kanagawa')">
+                                神奈川
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- IC選択リスト (スクロール) -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-semibold text-slate-400">一覧から入口ICを決定</label>
+                            <span id="ic-count-badge" class="text-[9px] text-slate-500 font-mono font-bold">--- ICs</span>
+                        </div>
+                        <div id="ic-scroll-list" class="bg-slate-950 rounded-xl border border-slate-850 max-h-52 overflow-y-auto p-1.5 space-y-1">
+                            <!-- JSで全ICを動的に描画 -->
+                        </div>
+                    </div>
+
+                    <!-- 選択された入口ICの確認表示 -->
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] text-slate-500 font-bold uppercase block">選択中</span>
+                            <span id="selected-ic-display" class="text-sm font-extrabold text-cyan-400">---</span>
+                        </div>
+                        <div id="selected-ic-badge" class="bg-slate-900 border border-slate-800 px-2 py-1 rounded text-[10px] font-semibold text-slate-400">
+                            ---
+                        </div>
+                    </div>
+
+                    <!-- 車種選択 -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1.5">車種区分（ETC料金）</label>
+                        <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-850">
+                            <button id="v-type-standard" class="py-2 px-3 rounded-lg text-xs font-semibold transition text-center bg-slate-800 text-white shadow-sm" onclick="setVehicleType('standard')">
+                                普通車 <span class="text-[10px] text-cyan-400 ml-1">300円</span>
+                            </button>
+                            <button id="v-type-light" class="py-2 px-3 rounded-lg text-xs font-semibold transition text-center text-slate-400 hover:text-slate-200" onclick="setVehicleType('light')">
+                                軽・二輪 <span class="text-[10px] text-emerald-400 ml-1">280円</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ドライブルート選択（夜景・スポーツ・初心者） -->
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-xl">
+                <h3 class="text-sm font-bold text-white mb-3.5 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-purple-400"></i>
+                    <span>走行スタイルの選択</span>
+                </h3>
+                <div class="space-y-2.5">
+                    <!-- 夜景中心ルート -->
+                    <button onclick="setDrivingStyle('nightview')" id="style-btn-nightview" class="w-full text-left p-3.5 rounded-xl border-2 transition flex items-center justify-between gap-3 group relative overflow-hidden">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-indigo-950/80 text-indigo-400 p-2 rounded-lg text-base group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-moon"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-extrabold text-white block">極彩ネオン・シティクルーズ</span>
+                                <span class="text-[10px] text-slate-400">絶景夜景・東京タワー・ベイブリッジを流すロマンチックルート</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md font-extrabold whitespace-nowrap">夜景重視</span>
+                    </button>
+
+                    <!-- ワインディング・スポーツルート -->
+                    <button onclick="setDrivingStyle('sport')" id="style-btn-sport" class="w-full text-left p-3.5 rounded-xl border-2 transition flex items-center justify-between gap-3 group relative overflow-hidden">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-rose-950/80 text-rose-400 p-2 rounded-lg text-base group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-route"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-extrabold text-white block">アーバン・ワインディング</span>
+                                <span class="text-[10px] text-slate-400">JCTの急ループ、C1の連続S字でタイトに遊ぶテクニカルルート</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-rose-500/10 text-rose-300 px-2 py-0.5 rounded-md font-extrabold whitespace-nowrap">走り重視</span>
+                    </button>
+
+                    <!-- 初心者安全ルート -->
+                    <button onclick="setDrivingStyle('beginner')" id="style-btn-beginner" class="w-full text-left p-3.5 rounded-xl border-2 transition flex items-center justify-between gap-3 group relative overflow-hidden">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-emerald-950/80 text-emerald-400 p-2 rounded-lg text-base group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-extrabold text-white block">マイルド・イージーハイウェイ</span>
+                                <span class="text-[10px] text-slate-400">直線主体の湾岸、見通しの良いC2トンネルで合流・カーブを極小化</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md font-extrabold whitespace-nowrap">初心者安心</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 出発前必須チェックリスト -->
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-xl">
+                <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+                    <span>出発前必須チェックリスト</span>
+                </h3>
+                <div class="space-y-2.5">
+                    <label class="flex items-start gap-2.5 text-xs text-slate-300 cursor-pointer group">
+                        <input type="checkbox" class="mt-0.5 rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-0 focus:ring-offset-0 transition" checked>
+                        <span class="group-hover:text-white"><strong>ETCカード</strong>は確実に車載器に挿入されているか？</span>
+                    </label>
+                    <label class="flex items-start gap-2.5 text-xs text-slate-300 cursor-pointer group">
+                        <input type="checkbox" class="mt-0.5 rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-0 focus:ring-offset-0 transition" checked>
+                        <span class="group-hover:text-white"><strong>ガソリン</strong>は十分に入っているか？（周回中にGSはありません）</span>
+                    </label>
+                    <label class="flex items-start gap-2.5 text-xs text-slate-300 cursor-pointer group">
+                        <input type="checkbox" class="mt-0.5 rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-0 focus:ring-offset-0 transition" checked>
+                        <span class="group-hover:text-white">提案された<strong>指定の「出口IC」以外</strong>で降りないこと</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 保存されたプラン -->
+            <div id="saved-plans-box" class="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-xl hidden">
+                <h3 class="text-sm font-bold text-white mb-3 flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-bookmark text-amber-400"></i>
+                        <span>保存したドライブ計画</span>
+                    </span>
+                    <button class="text-[10px] text-slate-500 hover:text-red-400" onclick="clearSavedPlans()">すべて削除</button>
+                </h3>
+                <div id="saved-plans-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    <!-- JSで挿入 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 右側：プラン提示 ＆ AIコンシェルジュダッシュボード (7cols / 12) -->
+        <section class="lg:col-span-7 flex flex-col space-y-6">
+            
+            <!-- メイン結果表示 -->
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                <!-- 装飾用ネオンライン -->
+                <div class="absolute top-0 right-0 w-32 h-1 bg-gradient-to-l from-cyan-400 to-transparent"></div>
+                
+                <!-- 料金・距離・時間のハイライト表示 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pb-6 border-b border-slate-800">
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 flex flex-col justify-center relative">
+                        <span class="text-[11px] text-slate-400 uppercase tracking-wider font-bold">ETC 通行料金</span>
+                        <div class="flex items-baseline mt-1">
+                            <span id="display-price" class="text-4xl font-black text-cyan-400 tracking-tight digital-font">300</span>
+                            <span class="text-xs text-cyan-400 ml-1 font-bold">円 (税込)</span>
+                        </div>
+                        <span class="absolute top-2 right-2 text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-1.5 py-0.5 rounded-md font-bold">合法最安値</span>
+                    </div>
+
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 flex flex-col justify-center">
+                        <span class="text-[11px] text-slate-400 uppercase tracking-wider font-bold">想定ドライブ距離</span>
+                        <div class="flex items-baseline mt-1">
+                            <span id="display-distance" class="text-3xl font-bold text-white tracking-tight digital-font">--.-</span>
+                            <span class="text-xs text-slate-400 ml-1 font-bold">km</span>
+                        </div>
+                        <span id="display-shortest-distance" class="text-[10px] text-slate-500 mt-1">（最短距離: -- km）</span>
+                    </div>
+
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 flex flex-col justify-center">
+                        <span class="text-[11px] text-slate-400 uppercase tracking-wider font-bold">想定所要時間</span>
+                        <div class="flex items-baseline mt-1">
+                            <span id="display-duration" class="text-3xl font-bold text-white tracking-tight digital-font">--</span>
+                            <span class="text-xs text-slate-400 ml-1 font-bold">分</span>
+                        </div>
+                        <span class="text-[10px] text-slate-500 mt-1">※安全速度の目安時間</span>
+                    </div>
+                </div>
+
+                <!-- ルート概要 -->
+                <div class="py-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">推奨ナビゲーションルート</span>
+                        <div class="flex gap-2">
+                            <button onclick="saveCurrentPlan()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md border border-slate-700 transition flex items-center gap-1">
+                                <i class="fa-regular fa-bookmark"></i> 保存
+                            </button>
+                            <button onclick="copyRouteToClipboard()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md border border-slate-700 transition flex items-center gap-1">
+                                <i class="fa-regular fa-copy"></i> コピー
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex items-center space-x-3 w-full md:w-auto">
+                            <div class="bg-blue-600 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-md shadow-blue-500/20">
+                                入口
+                            </div>
+                            <div class="text-left">
+                                <p id="nav-entrance-name" class="text-sm font-bold text-white">---</p>
+                                <p id="nav-entrance-line" class="text-[11px] text-slate-500">---</p>
+                            </div>
+                        </div>
+
+                        <div class="flex-grow flex items-center justify-center py-2 md:py-0">
+                            <div class="w-full flex items-center justify-between text-slate-600 relative">
+                                <div class="absolute inset-x-0 top-1/2 h-0.5 bg-dashed bg-slate-800 border-t border-dashed -translate-y-1/2"></div>
+                                <div class="z-10 bg-slate-950 px-2 text-[10px] font-bold text-cyan-400 border border-slate-800 rounded-full flex items-center gap-1 py-0.5">
+                                    <i class="fa-solid fa-arrows-spin animate-spin"></i> <span id="driving-concept-badge">ドライブ中</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 w-full md:w-auto md:justify-end">
+                            <div class="text-right">
+                                <p id="nav-exit-name" class="text-sm font-bold text-white">---</p>
+                                <p id="nav-exit-line" class="text-[11px] text-slate-500">---</p>
+                            </div>
+                            <div class="bg-red-500 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-md shadow-red-500/20">
+                                出口
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ルート難易度 ＆ 特徴インジケーター -->
+                <div class="mb-4 p-3.5 bg-slate-950 border border-slate-850 rounded-xl flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400 font-semibold">ルート難易度:</span>
+                        <span id="route-difficulty-badge" class="text-xs font-extrabold px-2.5 py-0.5 rounded-md">---</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] text-slate-500 block font-bold">ルート特徴</span>
+                        <span id="route-feature-text" class="text-xs text-slate-300 font-semibold">---</span>
+                    </div>
+                </div>
+
+                <!-- ルート分岐詳細 (タイムラインUI) -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">JCT分岐ガイド & ナビステップ</h4>
+                        <span id="route-type-badge" class="text-[10px] text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800/40">---</span>
+                    </div>
+                    <div id="navigation-steps" class="space-y-4 relative border-l-2 border-slate-800 pl-4 ml-2">
+                        <!-- JSでステップを動的生成 -->
+                    </div>
+                </div>
+
+                <!-- 立ち寄りおすすめPA情報 -->
+                <div id="pa-info-card" class="mt-6 bg-slate-950 border border-slate-850 rounded-xl p-4 hidden">
+                    <h4 class="text-xs font-bold text-amber-400 flex items-center gap-1.5 mb-2">
+                        <i class="fa-solid fa-square-parking text-sm"></i>
+                        <span>おすすめ立ち寄りパーキングエリア</span>
+                    </h4>
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <span id="pa-name" class="text-sm font-extrabold text-white">---</span>
+                            <span id="pa-line" class="text-[10px] text-slate-500 ml-2">---</span>
+                            <p id="pa-desc" class="text-xs text-slate-400 mt-1 leading-relaxed">---</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-lg text-right md:min-w-[150px]">
+                            <span class="text-[10px] text-slate-500 block">名物・特徴</span>
+                            <span id="pa-food" class="text-xs font-semibold text-emerald-400">---</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AIドライブコンシェルジュカード -->
+            <div class="bg-slate-900 rounded-2xl border-2 border-purple-900/60 p-6 shadow-xl relative overflow-hidden ai-pulse">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-fuchsia-500 to-cyan-500"></div>
+                
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                        <span class="flex h-2.5 w-2.5 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-500"></span>
+                        </span>
+                        <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+                        <span>AIドライブコンシェルジュ</span>
+                    </h3>
+                    <span class="text-[9px] bg-purple-950 text-purple-300 border border-purple-800/60 px-2 py-0.5 rounded-full font-mono font-bold">
+                        GEMINI 3.1 ACTIVE
+                    </span>
+                </div>
+
+                <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                    選択中の走行スタイル「<strong id="ai-current-style-label" class="text-purple-300">夜景重視</strong>」に基づき、リアルタイムの道路状況やお天気情報、最高のビューポイントやお勧めの走り方をウェブ検索（Google Search）を交えてお伝えします。
+                </p>
+
+                <!-- リアルタイムAI分析ボタン -->
+                <button onclick="triggerRealtimeAiCheck()" id="btn-ai-realtime" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 mb-4">
+                    <i class="fa-solid fa-radar text-sm animate-pulse"></i>
+                    <span id="btn-ai-text">現在のルート状況をAIでリアルタイム分析</span>
+                </button>
+
+                <!-- クイック質問チップス -->
+                <div class="mb-4">
+                    <span class="text-[10px] text-slate-500 block mb-1.5 font-bold uppercase">よくあるAIへの相談</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="sendQuickQuestion('大黒PA・辰巳PAの今夜の閉鎖・混雑予測情報を調べて！')" class="text-[10px] bg-slate-950 border border-slate-850 hover:border-purple-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg transition">
+                            🚨 PA閉鎖情報を調べる
+                        </button>
+                        <button onclick="sendQuickQuestion('この走行スタイルに合わせて最も適したおすすめBGM、夜のドライブの雰囲気作りの提案をちょうだい！')" class="text-[10px] bg-slate-950 border border-slate-850 hover:border-purple-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg transition">
+                            🎵 ドライブBGM・雰囲気
+                        </button>
+                        <button onclick="sendQuickQuestion('現在走ろうとしているルート沿いで、初心者でも安全にJCT分岐を乗り切るためのコツや減速ポイントを教えて')" class="text-[10px] bg-slate-950 border border-slate-850 hover:border-purple-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg transition">
+                            🔰 合流・安全運転のコツ
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI応答エリア -->
+                <div id="ai-response-box" class="bg-slate-950 rounded-xl border border-slate-850 p-4 max-h-[280px] overflow-y-auto mb-4 hidden">
+                    <div class="flex items-start gap-2.5">
+                        <div class="bg-purple-900/40 text-purple-300 p-1.5 rounded-lg text-xs mt-0.5">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <span class="text-[10px] text-purple-400 font-bold uppercase tracking-wider block mb-1">コンシェルジュのアドバイス</span>
+                            <div id="ai-text-content" class="text-xs text-slate-300 leading-relaxed space-y-2">
+                                <!-- AI出力がここに流し込まれます -->
+                            </div>
+                            
+                            <!-- ソース・引用元 -->
+                            <div id="ai-sources" class="mt-3 pt-2.5 border-t border-slate-900 hidden">
+                                <span class="text-[9px] text-slate-500 block mb-1.5"><i class="fa-solid fa-magnifying-glass-location"></i> AIが検証に使用した参照ソース:</span>
+                                <div id="ai-sources-list" class="flex flex-wrap gap-1.5">
+                                    <!-- リンクがここに挿入されます -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- カスタム質問フォーム -->
+                <div class="flex gap-2">
+                    <input type="text" id="ai-user-query" placeholder="AIに質問（例: 今夜の首都高の路面温度や雨の影響は？）" 
+                           class="flex-grow bg-slate-950 border border-slate-850 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500 transition"
+                           onkeypress="if(event.key === 'Enter') submitCustomQuestion()">
+                    <button onclick="submitCustomQuestion()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 p-2.5 rounded-xl transition flex items-center justify-center">
+                        <i class="fa-solid fa-paper-plane text-xs text-purple-400"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ヘルプ・ルール解説モーダル -->
+    <div id="modal-help" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden transition-all duration-300">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button onclick="toggleHelpModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap text-cyan-400"></i>
+                <span>「300円周回」の仕組みと法的免責</span>
+            </h3>
+
+            <div class="space-y-4 text-slate-300 text-sm max-h-[70vh] overflow-y-auto pr-2">
+                <div>
+                    <h4 class="font-bold text-white flex items-center gap-1">
+                        <span class="text-cyan-400">1.</span> なぜ一律300円になるのか？
+                    </h4>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                        首都高速のETC料金は、**「入口と出口の間の最短経路の距離」**を元に計算されます。入口と出口が物理的に非常に近く、最短経路が 4.3km 以下であれば、中でどれだけ遠回りをしたり何周しようとも、システム上は初乗り最安料金である「300円（軽自動車・二輪は280円）」が適用されます。
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-white flex items-center gap-1">
+                        <span class="text-cyan-400">2.</span> 成功させるための重要ルール
+                    </h4>
+                    <ul class="text-xs text-slate-400 mt-1 space-y-2 list-disc list-inside">
+                        <li><strong>ETCが必須：</strong>現金払い（一般レーン）や、ETCカードを挿し忘れた場合は通常料金や高額請求になります。</li>
+                        <li><strong>首都高から出ない：</strong>他社高速（東名、中央、外環など）に乗り換えると、そこで料金が別途発生します。</li>
+                        <li><strong>同じICで出入りしない：</strong>「渋谷から入って渋谷で出る」は原則エラーになります。少しズラしたIC（例：初台南で入って富ヶ谷で出る）が確実です。</li>
+                    </ul>
+                </div>
+
+                <div class="p-3 bg-red-950/20 border border-red-900/50 rounded-xl">
+                    <h4 class="font-bold text-red-400 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-scale-balanced"></i> 重要免責事項 (App Store等への公開対策)
+                    </h4>
+                    <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                        本アプリは非公式のナビゲーション支援ツールです。首都高速道路株式会社等とは一切関係ありません。提示されるルートはシステム上の最短料金計算仕様に則っていますが、実際の道路状況や規制、現地法、安全マナー、速度制限を必ず優先してください。本アプリの使用によって生じた一切の損害・トラブル・法的責任について、開発者は責任を負いかねます。安全第一の紳士的なドライブをお楽しみください。
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="toggleHelpModal()" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">
+                    確認・同意しました
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWAインストール手順モーダル -->
+    <div id="modal-pwa-install" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden transition-all duration-300">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative text-center">
+            <button onclick="togglePwaModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="text-cyan-400 text-4xl mb-3">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </div>
+            
+            <h3 class="text-base font-bold text-white mb-2">スマホにアプリとしてインストール</h3>
+            <p class="text-xs text-slate-400 mb-5 leading-relaxed">
+                App Storeを通さず、お使いの端末に「全画面起動アプリ」として今すぐ追加して実際の車内で利用できます。
+            </p>
+
+            <div class="space-y-4 text-left bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-300">
+                <div class="flex gap-2 items-start">
+                    <span class="bg-cyan-500/10 text-cyan-400 w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0">iOS</span>
+                    <div>
+                        <p class="font-bold text-white">Safariブラウザで開いている場合</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">下部の共有ボタン <i class="fa-regular fa-square-share-nodes text-cyan-400"></i> を押し、メニューから<strong>「ホーム画面に追加」</strong>を選択します。</p>
+                    </div>
+                </div>
+                <div class="flex gap-2 items-start border-t border-slate-900 pt-3">
+                    <span class="bg-purple-500/10 text-purple-400 w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0">And</span>
+                    <div>
+                        <p class="font-bold text-white">Chromeブラウザで開いている場合</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">右上のメニュー <i class="fa-solid fa-ellipsis-vertical text-purple-400"></i> を押し、メニューから<strong>「アプリをインストール」</strong>または<strong>「ホーム画面に追加」</strong>を選択します。</p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="togglePwaModal()" class="mt-6 w-full bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
+                閉じる
+            </button>
+        </div>
+    </div>
+
+    <!-- トースト通知用のコンテナ -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- フッター -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-6 mt-12 mb-safe">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-2 text-xs text-slate-600">
+            <p>首都高300円周回ルートプランナー Pro + AI / 非公式ナビゲーション支援ツール</p>
+            <p>© 2026 Shutoko 300yen Loop Planner. 法定速度を守り、安全第一でドライブをお楽しみください。</p>
+        </div>
+    </footer>
+
+    <script>
+        // 首都高速道路 主要ICデータベース (首都高の約50箇所の主要IC・JCTを網羅)
+        const ALL_ICS = [
+            // C1/C2 環状線エリア (東京セントラル)
+            { id: 'hatsudaiminami', name: '初台南', line: 'C2 中央環状線', category: 'ring', partner: { name: '富ヶ谷', line: 'C2 中央環状線', shortestDist: 2.2 } },
+            { id: 'tomigaya', name: '富ヶ谷', line: 'C2 中央環状線', category: 'ring', partner: { name: '初台南', line: 'C2 中央環状線', shortestDist: 2.2 } },
+            { id: 'shibakoen', name: '芝公園', line: 'C1 都心環状線', category: 'ring', partner: { name: '飯倉', line: 'C1 都心環状線', shortestDist: 1.5 } },
+            { id: 'iigura', name: '飯倉', line: 'C1 都心環状線', category: 'ring', partner: { name: '芝公園', line: 'C1 都心環状線', shortestDist: 1.5 } },
+            { id: 'kasumigaseki', name: '霞が関', line: 'C1 都心環状線', category: 'ring', partner: { name: '代官町', line: 'C1 都心環状線', shortestDist: 3.1 } },
+            { id: 'daikanchou', name: '代官町', line: 'C1 都心環状線', category: 'ring', partner: { name: '霞が関', line: 'C1 都心環状線', shortestDist: 3.1 } },
+            { id: 'ginza', name: '銀座', line: 'C1 都心環状線', category: 'ring', partner: { name: '京橋', line: 'C1 都心環状線', shortestDist: 1.1 } },
+            { id: 'kyobashi', name: '京橋', line: 'C1 都心環状線', category: 'ring', partner: { name: '銀座', line: 'C1 都心環状線', shortestDist: 1.1 } },
+            { id: 'shiodome', name: '汐留', line: 'C1 都心環状線', category: 'ring', partner: { name: '芝公園', line: 'C1 都心環状線', shortestDist: 2.5 } },
+            { id: 'kandabashi', name: '神田橋', line: 'C1 都心環状線', category: 'ring', partner: { name: '呉服橋', line: 'C1 都心環状線', shortestDist: 1.3 } },
+            
+            // C2エリア続き
+            { id: 'gofukubashi', name: '呉服橋', line: 'C1 都心環状線', category: 'ring', partner: { name: '神田橋', line: 'C1 都心環状線', shortestDist: 1.3 } },
+            { id: 'nishiikebukuro', name: '西池袋', line: 'C2 中央環状線', category: 'ring', partner: { name: '東池袋', line: '5号 池袋線', shortestDist: 3.5 } },
+            { id: 'nakanochojabashi', name: '中野長者橋', line: 'C2 中央環状線', category: 'ring', partner: { name: '初台', line: '4号 新宿線', shortestDist: 2.9 } },
+            { id: 'gotanda', name: '五反田', line: 'C2 中央環状線', category: 'ring', partner: { name: '大井', line: 'B 湾岸線', shortestDist: 3.8 } },
+            { id: 'oujiminami', name: '王子南', line: 'C2 中央環状線', category: 'ring', partner: { name: '王子北', line: 'C2 中央環状線', shortestDist: 1.9 } },
+            { id: 'oujikita', name: '王子北', line: 'C2 中央環状線', category: 'ring', partner: { name: '王子南', line: 'C2 中央環状線', shortestDist: 1.9 } },
+
+            // 放射線・湾岸エリア
+            { id: 'shinjuku', name: '新宿', line: '4号 新宿線', category: 'radial', partner: { name: '代々木', line: '4号 新宿線', shortestDist: 2.1 } },
+            { id: 'yoyogi', name: '代々木', line: '4号 新宿線', category: 'radial', partner: { name: '新宿', line: '4号 新宿線', shortestDist: 2.1 } },
+            { id: 'shibuya', name: '渋谷', line: '3号 渋谷線', category: 'radial', partner: { name: '高樹町', line: '3号 渋谷線', shortestDist: 1.8 } },
+            { id: 'takagicho', name: '高樹町', line: '3号 渋谷線', category: 'radial', partner: { name: '渋谷', line: '3号 渋谷線', shortestDist: 1.8 } },
+            { id: 'kahei', name: '加平', line: '6号 三郷線', category: 'radial', partner: { name: '八潮', line: '6号 三郷線', shortestDist: 3.8 } },
+            { id: 'yashio', name: '八潮', line: '6号 三郷線', category: 'radial', partner: { name: '加平', line: '6号 三郷線', shortestDist: 3.8 } },
+            { id: 'oi', name: '大井', line: 'B 湾岸線', category: 'radial', partner: { name: '臨海副都心', line: 'B 湾岸線', shortestDist: 2.5 } },
+            { id: 'rinkaihokusoshin', name: '臨海副都心', line: 'B 湾岸線', category: 'radial', partner: { name: '大井', line: 'B 湾岸線', shortestDist: 2.5 } },
+            { id: 'ariake', name: '有明', line: 'B 湾岸線', category: 'radial', partner: { name: '豊洲', line: '10号 晴海線', shortestDist: 2.3 } },
+            { id: 'toyosu', name: '豊洲', line: '10号 晴海線', category: 'radial', partner: { name: '有明', line: 'B 湾岸線', shortestDist: 2.3 } },
+            { id: 'shinkiba', name: '新木場', line: 'B 湾岸線', category: 'radial', partner: { name: '葛西', line: 'B 湾岸線', shortestDist: 3.6 } },
+            { id: 'kasai', name: '葛西', line: 'B 湾岸線', category: 'radial', partner: { name: '新木場', line: 'B 湾岸線', shortestDist: 3.6 } },
+            { id: 'urayasu', name: '浦安', line: 'B 湾岸線', category: 'radial', partner: { name: '舞浜', line: 'B 湾岸線', shortestDist: 2.8 } },
+            { id: 'maihama', name: '舞浜', line: 'B 湾岸線', category: 'radial', partner: { name: '浦安', line: 'B 湾岸線', shortestDist: 2.8 } },
+            { id: 'daiba', name: '台場', line: '11号 台場線', category: 'radial', partner: { name: '芝浦', line: '1号 羽田線', shortestDist: 3.9 } },
+            { id: 'shibaura', name: '芝浦', line: '1号 羽田線', category: 'radial', partner: { name: '台場', line: '11号 台場線', shortestDist: 3.9 } },
+            { id: 'haneda', name: '羽田', line: '1号 羽田線', category: 'radial', partner: { name: '空港中央', line: 'B 湾岸線', shortestDist: 4.1 } },
+            { id: 'kukochuo', name: '空港中央', line: 'B 湾岸線', category: 'radial', partner: { name: '羽田', line: '1号 羽田線', shortestDist: 4.1 } },
+            { id: 'kiba', name: '木場', line: '9号 深川線', category: 'radial', partner: { name: '枝川', line: '9号 深川線', shortestDist: 1.8 } },
+            { id: 'edagawa', name: '枝川', line: '9号 深川線', category: 'radial', partner: { name: '木場', line: '9号 深川線', shortestDist: 1.8 } },
+            { id: 'takaido', name: '高井戸', line: '4号 新宿線', category: 'radial', partner: { name: '幡ヶ谷', line: '4号 新宿線', shortestDist: 4.2 } },
+            { id: 'hatagaya', name: '幡ヶ谷', line: '4号 新宿線', category: 'radial', partner: { name: '高井戸', line: '4号 新宿線', shortestDist: 4.2 } },
+
+            // 神奈川エリア
+            { id: 'minatomirai', name: 'みなとみらい', line: 'K1 横羽線', category: 'kanagawa', partner: { name: '横浜駅東口', line: 'K1 横羽線', shortestDist: 2.1 } },
+            { id: 'yokohama_higashi', name: '横浜駅東口', line: 'K1 横羽線', category: 'kanagawa', partner: { name: 'みなとみらい', line: 'K1 横羽線', shortestDist: 2.1 } },
+            { id: 'yokohama_nishiguchi', name: '横浜駅西口', line: 'K2 三ツ沢線', category: 'kanagawa', partner: { name: '三ツ沢', line: 'K2 三ツ沢線', shortestDist: 2.0 } },
+            { id: 'mitsuzawa', name: '三ツ沢', line: 'K2 三ツ沢線', category: 'kanagawa', partner: { name: '横浜駅西口', line: 'K2 三ツ沢線', shortestDist: 2.0 } },
+            { id: 'ishikawacho', name: '石川町', line: 'K3 狩場線', category: 'kanagawa', partner: { name: '新山下', line: 'K1 横羽線', shortestDist: 2.9 } },
+            { id: 'shinyamashita', name: '新山下', line: 'K1 横羽線', category: 'kanagawa', partner: { name: '石川町', line: 'K3 狩場線', shortestDist: 2.9 } },
+            { id: 'yokohamakoen', name: '横浜公園', line: 'K1 横羽線', category: 'kanagawa', partner: { name: 'みなとみらい', line: 'K1 横羽線', shortestDist: 3.2 } },
+            { id: 'bandoubashi', name: '阪東橋', line: 'K3 狩場線', category: 'kanagawa', partner: { name: '牧の原', line: 'K3 狩場線', shortestDist: 2.5 } },
+            { id: 'tuzuki', name: '都筑', line: 'K7 横浜北線', category: 'kanagawa', partner: { name: '港北', line: 'K7 横浜北線', shortestDist: 3.5 } },
+            { id: 'kohoku', name: '港北', line: 'K7 横浜北線', category: 'kanagawa', partner: { name: '都筑', line: 'K7 横浜北線', shortestDist: 3.5 } }
+        ];
+
+        // PA情報データベース
+        const PA_DATABASE = {
+            daikoku: { name: '大黒PA', line: 'K5 大黒線 / 湾岸線', desc: '車好きが集う全国屈指の超大型オアシス。週末夜間の閉鎖に注意。', food: '大黒ソフト、横浜サンマー麺' },
+            tatsumi1: { name: '辰巳第1PA', line: '9号深川線(上り)', desc: '高層ビル群や走る車列を高架から見下ろせる夜景の名所。スペースはコンパクト。', food: 'ホットドッグ、自販機飲料' },
+            shibaura: { name: '芝浦PA', line: '11号台場線(上り)', desc: 'レインボーブリッジのすぐふもとに位置する隠れ家PA。東京タワーが抜群に綺麗に望めます。', food: '芝浦食堂「肉野菜炒め定食」' },
+            yoyogi: { name: '代々木PA', line: '4号新宿線(上り)', desc: '森の中のようにウッディで美しい、都会の真ん中にあるスタイリッシュなPA。新宿ビルビューが抜群。', food: 'はちみつソフト、美味しいコーヒー' },
+            heiwajima: { name: '平和島PA(上り)', line: '1号羽田線', desc: '広めの駐車スペースがあり、ご飯が美味しいスタミナ系PA。', food: '平和島名物「もつ煮込み」' }
+        };
+
+        // --- アプリのグローバル状態管理 ---
+        let selectedIC = ALL_ICS[0]; // 初期値
+        let activeTabCategory = 'all'; 
+        let vehicleType = 'standard'; 
+        let activeDrivingStyle = 'nightview'; 
+
+        window.onload = function() {
+            // UIロード
+            filterICs();
+            selectIC(selectedIC.id);
+            loadSavedPlans();
+            setDrivingStyle('nightview'); 
+            checkPwaStatus(); // PWA追加可能か判断
+        };
+
+        // ICのフィルタリング & リストレンダリング
+        function filterICs() {
+            const query = document.getElementById('ic-search').value.toLowerCase().trim();
+            const listContainer = document.getElementById('ic-scroll-list');
+            const customPanel = document.getElementById('custom-ic-panel');
+            const customNameInput = document.getElementById('custom-ic-name');
+            listContainer.innerHTML = '';
+
+            const filtered = ALL_ICS.filter(ic => {
+                const matchesQuery = ic.name.toLowerCase().includes(query) || ic.line.toLowerCase().includes(query);
+                const matchesTab = activeTabCategory === 'all' || ic.category === activeTabCategory;
+                return matchesQuery && matchesTab;
+            });
+
+            // バッジ数の更新
+            document.getElementById('ic-count-badge').textContent = `${filtered.length} ICs`;
+
+            // 検索結果がなく、ユーザーが何かテキストを入力している場合、カスタムICの作成パネルを表示
+            if (filtered.length === 0 && query.length > 0) {
+                customPanel.classList.remove('hidden');
+                customNameInput.value = query;
+                listContainer.innerHTML = '<p class="text-slate-500 text-[11px] p-4 text-center">データベースに未登録のICです。上記のボタンからカスタム追加して周回を開始できます！</p>';
+                return;
+            } else {
+                customPanel.classList.add('hidden');
+            }
+
+            filtered.forEach(ic => {
+                const isSelected = selectedIC.id === ic.id;
+                const itemBtn = document.createElement('button');
+                itemBtn.className = `w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex justify-between items-center ${isSelected ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-bold' : 'bg-slate-900 border border-slate-900 text-slate-300 hover:bg-slate-850 hover:text-white'}`;
+                itemBtn.onclick = () => selectIC(ic.id);
+
+                let badgeColor = 'bg-slate-800 text-slate-400';
+                if (ic.category === 'ring') badgeColor = 'bg-emerald-950/40 text-emerald-400 border border-emerald-900';
+                if (ic.category === 'radial') badgeColor = 'bg-blue-950/40 text-blue-400 border border-blue-900';
+                if (ic.category === 'kanagawa') badgeColor = 'bg-purple-950/40 text-purple-400 border border-purple-900';
+
+                itemBtn.innerHTML = `
+                    <span>${ic.name} <span class="text-[10px] opacity-60 ml-1 font-normal">(${ic.line})</span></span>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded ${badgeColor}">${ic.line.split(' ')[1] || ic.line.split(' ')[0]}</span>
+                `;
+                listContainer.appendChild(itemBtn);
+            });
+        }
+
+        // 自由入力からカスタムICを瞬時に生成・登録するアルゴリズム
+        function createNewCustomIC() {
+            const queryName = document.getElementById('custom-ic-name').value.trim();
+            const category = document.getElementById('custom-ic-category').value;
+            if (!queryName) return;
+
+            // すでに同一名称のICが登録されていないかチェック
+            const exists = ALL_ICS.find(ic => ic.name === queryName);
+            if (exists) {
+                selectIC(exists.id);
+                showToast('指定されたICはすでに存在します', 'info');
+                return;
+            }
+
+            // 新規IC情報のモデリング
+            const newId = 'custom-' + Date.now();
+            let routeLine = '';
+            let exitPartnerName = queryName + '・隣接';
+            let partnerLine = '';
+
+            if (category === 'ring') {
+                routeLine = 'C2 中央環状線 (カスタム)';
+                partnerLine = 'C2 中央環状線';
+            } else if (category === 'radial') {
+                routeLine = 'B 湾岸線 (カスタム)';
+                partnerLine = 'B 湾岸線';
+            } else {
+                routeLine = 'K1 横羽線 (カスタム)';
+                partnerLine = 'K1 横羽線';
+            }
+
+            const newIC = {
+                id: newId,
+                name: queryName,
+                line: routeLine,
+                category: category,
+                isCustom: true, // カスタムフラグ
+                partner: {
+                    name: exitPartnerName + '出口',
+                    line: partnerLine,
+                    shortestDist: 2.5
+                }
+            };
+
+            // データベースに即時統合
+            ALL_ICS.push(newIC);
+            
+            // 検索ボックスを空にして更新
+            document.getElementById('ic-search').value = '';
+            setFilterCategory(category);
+            selectIC(newId);
+
+            showToast(`カスタムIC「${queryName}」を周回エンジンへ登録しました！`, 'success');
+        }
+
+        // タブ切り替え
+        function setFilterCategory(category) {
+            activeTabCategory = category;
+            
+            const tabs = {
+                all: document.getElementById('tab-all'),
+                ring: document.getElementById('tab-ring'),
+                radial: document.getElementById('tab-radial'),
+                kanagawa: document.getElementById('tab-kanagawa')
+            };
+
+            Object.keys(tabs).forEach(key => {
+                if (key === category) {
+                    tabs[key].className = "py-1.5 px-1 rounded-lg text-[10px] font-semibold text-center transition bg-slate-800 text-white shadow-sm";
+                } else {
+                    tabs[key].className = "py-1.5 px-1 rounded-lg text-[10px] font-semibold text-center transition text-slate-400 hover:text-slate-200";
+                }
+            });
+
+            filterICs();
+        }
+
+        // IC選択
+        function selectIC(id) {
+            const found = ALL_ICS.find(ic => ic.id === id);
+            if (!found) return;
+
+            selectedIC = found;
+
+            document.getElementById('selected-ic-display').textContent = `${found.name} 入口`;
+            document.getElementById('selected-ic-badge').textContent = found.line;
+
+            filterICs();
+            generateRoutePlan();
+        }
+
+        // 車種変更時
+        function setVehicleType(type) {
+            vehicleType = type;
+            const btnStd = document.getElementById('v-type-standard');
+            const btnLight = document.getElementById('v-type-light');
+            const displayPrice = document.getElementById('display-price');
+
+            if (type === 'standard') {
+                btnStd.className = "py-2 px-3 rounded-lg text-xs font-semibold transition text-center bg-slate-800 text-white shadow-sm";
+                btnLight.className = "py-2 px-3 rounded-lg text-xs font-semibold transition text-center text-slate-400 hover:text-slate-200";
+                displayPrice.textContent = "300";
+            } else {
+                btnStd.className = "py-2 px-3 rounded-lg text-xs font-semibold transition text-center text-slate-400 hover:text-slate-200";
+                btnLight.className = "py-2 px-3 rounded-lg text-xs font-semibold transition text-center bg-slate-800 text-white shadow-sm";
+                displayPrice.textContent = "280";
+            }
+        }
+
+        // 走行スタイルの選択
+        function setDrivingStyle(style) {
+            activeDrivingStyle = style;
+
+            const styles = ['nightview', 'sport', 'beginner'];
+            styles.forEach(s => {
+                const btn = document.getElementById(`style-btn-${s}`);
+                if (s === style) {
+                    if (s === 'nightview') {
+                        btn.className = "w-full text-left p-3.5 rounded-xl border-2 border-indigo-500 bg-indigo-950/30 text-indigo-100 shadow-lg shadow-indigo-500/10 transition flex items-center justify-between gap-3 group relative overflow-hidden";
+                    } else if (s === 'sport') {
+                        btn.className = "w-full text-left p-3.5 rounded-xl border-2 border-rose-500 bg-rose-950/30 text-rose-100 shadow-lg shadow-rose-500/10 transition flex items-center justify-between gap-3 group relative overflow-hidden";
+                    } else if (s === 'beginner') {
+                        btn.className = "w-full text-left p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-950/30 text-emerald-100 shadow-lg shadow-emerald-500/10 transition flex items-center justify-between gap-3 group relative overflow-hidden";
+                    }
+                } else {
+                    btn.className = "w-full text-left p-3.5 rounded-xl border-2 border-slate-800 bg-slate-900/50 text-slate-300 hover:border-slate-700 hover:text-slate-100 transition flex items-center justify-between gap-3 group relative overflow-hidden";
+                }
+            });
+
+            // ラベルの更新
+            const styleLabel = document.getElementById('ai-current-style-label');
+            const conceptBadge = document.getElementById('driving-concept-badge');
+            if (style === 'nightview') {
+                styleLabel.textContent = "極彩ネオン・夜景重視";
+                conceptBadge.textContent = "🌠 夜景満喫周回中";
+                conceptBadge.className = "z-10 bg-slate-950 px-2 text-[10px] font-bold text-indigo-400 border border-slate-800 rounded-full flex items-center gap-1 py-0.5";
+            } else if (style === 'sport') {
+                styleLabel.textContent = "アーバン・ワインディング重視";
+                conceptBadge.textContent = "🏎️ スポーティドライブ中";
+                conceptBadge.className = "z-10 bg-slate-950 px-2 text-[10px] font-bold text-rose-400 border border-slate-800 rounded-full flex items-center gap-1 py-0.5";
+            } else if (style === 'beginner') {
+                styleLabel.textContent = "マイルド・初心者安心";
+                conceptBadge.textContent = "🔰 安心ハイウェイ巡航中";
+                conceptBadge.className = "z-10 bg-slate-950 px-2 text-[10px] font-bold text-emerald-400 border border-slate-800 rounded-full flex items-center gap-1 py-0.5";
+            }
+
+            generateRoutePlan();
+        }
+
+        // どんなICが選ばれても、破綻しない3大スタイル別「動的ルートジェネレーター」
+        function generateRoutePlan() {
+            const stepsContainer = document.getElementById('navigation-steps');
+            stepsContainer.innerHTML = '';
+
+            const inIC = selectedIC;
+            const outIC = selectedIC.partner;
+            const category = inIC.category;
+
+            // すべてのIC・カテゴリに対応するダイナミックプラン構造
+            let plan = {
+                badge: '',
+                distance: 0,
+                duration: 0,
+                difficulty: '',
+                diffColor: '',
+                feature: '',
+                paKey: '',
+                steps: []
+            };
+
+            // 1. 各エリアカテゴリと選択スタイルに応じたプランの動的自動生成
+            if (category === 'kanagawa') {
+                // 神奈川エリア向け生成
+                if (activeDrivingStyle === 'nightview') {
+                    plan.badge = "極彩ネオン・横浜ベイブリッジ＆大黒PAメガツアー";
+                    plan.distance = 38.5;
+                    plan.duration = 45;
+                    plan.difficulty = "中級 (大黒・ベイブリッジ経由)";
+                    plan.diffColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                    plan.feature = "みなとみらい観覧車夜景 ➔ ベイブリッジ＆大黒PAライトアップ";
+                    plan.paKey = 'daikoku';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」からK1横羽線上り、または大黒・湾岸線方面へ。`, sign: `K1/B 湾岸線方面` },
+                        { action: 'BRANCH', text: `生麦JCTから大黒線へ分岐。近未来の工業地域ネオンが広がります。`, sign: `K5 大黒ふ頭`, color: 'bg-blue-600' },
+                        { action: 'KEEP', text: `横浜が誇る車好きの聖地「大黒PA」に進入。ドリンクを片手に愛車を鑑賞。`, sign: `大黒PA休憩` },
+                        { action: 'BRANCH', text: `大黒JCTから湾岸線西行きへ合流。巨大な横浜ベイブリッジを渡る最高のビュー！`, sign: `B 横浜ベイブリッジ`, color: 'bg-emerald-600' },
+                        { action: 'GOAL', text: `本牧JCTからK1に復帰し、至近の「${outIC.name}」より退出します。`, sign: `${outIC.name}` }
+                    ];
+                } else if (activeDrivingStyle === 'sport') {
+                    plan.badge = "アーバン・K3狩場急勾配ワインディング";
+                    plan.distance = 28.2;
+                    plan.duration = 32;
+                    plan.difficulty = "上級 (うねる高低差)";
+                    plan.diffColor = "bg-red-500/10 text-red-400 border-red-500/20";
+                    plan.feature = "三ツ沢の登坂カーブと、K3狩場線のタイトトンネルループ";
+                    plan.paKey = 'daikoku';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」からK1横羽線へ加速。`, sign: `K1 本線` },
+                        { action: 'BRANCH', text: `金港JCTからK2三ツ沢線へ、急な上りと回り込むコーナリング。`, sign: `K2 三ツ沢方面`, color: 'bg-rose-600' },
+                        { action: 'BRANCH', text: `JCTチェンジを経てK3狩場線へ分岐。長くスリリングなトンネルカーブに挑戦。`, sign: `K3 新保土ヶ谷`, color: 'bg-red-600' },
+                        { action: 'KEEP', text: `石川町JCTからK1に戻り、タイトな合流と車線規制に対応。`, sign: `K1 横浜駅方面` },
+                        { action: 'GOAL', text: `急勾配のカーブ手前、隣の「${outIC.name}」から安全に脱出。`, sign: `${outIC.name}` }
+                    ];
+                } else {
+                    plan.badge = "マイルド・横浜ストレート・イージークルーズ";
+                    plan.distance = 11.2;
+                    plan.duration = 14;
+                    plan.difficulty = "初級 (安全第一)";
+                    plan.diffColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                    plan.feature = "金港付近の広めの車線をキープ。JCT切り替えが最も少ない安心ライン";
+                    plan.paKey = 'daikoku';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」から合流。加速車線が長く安心です。`, sign: `K1 下り` },
+                        { action: 'KEEP', text: `無用な車線変更は控え、左から２番目の基本キープレフト車線を維持します。`, sign: `キープレフト` },
+                        { action: 'KEEP', text: `金港JCTを真っ直ぐ通過。合流車の動きに注意しながら安定走行。`, sign: `直進キープ` },
+                        { action: 'GOAL', text: `スピードをしっかり落とし、安全に「${outIC.name}」から退出。`, sign: `${outIC.name}` }
+                    ];
+                }
+            } else if (category === 'ring') {
+                // C1/C2 環状線エリア向け生成
+                if (activeDrivingStyle === 'nightview') {
+                    plan.badge = "極彩ネオン・C2荒川スカイツリー＆東京タワーループ";
+                    plan.distance = 49.8;
+                    plan.duration = 55;
+                    plan.difficulty = "中級 (荒川大高架ビュー)";
+                    plan.diffColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                    plan.feature = "遮るもののない川面夜景と、C1・C2の2大環状ネオンコンビネーション";
+                    plan.paKey = 'yoyogi';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」より首都高へ進入。`, sign: `C1/C2 本線` },
+                        { action: 'BRANCH', text: `JCTからC2中央環状へ。荒川沿いの広大な夜景とスカイツリーを正面に。`, sign: `C2 湾岸線方面`, color: 'bg-blue-600' },
+                        { action: 'BRANCH', text: `葛西JCTから湾岸線へスイッチしお台場へ。レインボーブリッジの上を通過。`, sign: `B 湾岸線`, color: 'bg-pink-600' },
+                        { action: 'KEEP', text: `芝浦PA付近で東京タワーのふもとを抜け、C1都心の光の壁に包まれます。`, sign: `C1 内回り` },
+                        { action: 'GOAL', text: `出発点に極めて近い隣の「${outIC.name}」ランプより安全に降車。`, sign: `${outIC.name}` }
+                    ];
+                } else if (activeDrivingStyle === 'sport') {
+                    plan.badge = "アーバン・首都高C1＆大橋JCT大旋回スポーツアタック";
+                    plan.distance = 27.5;
+                    plan.duration = 35;
+                    plan.difficulty = "上級 (JCT密集＆急S字)";
+                    plan.diffColor = "bg-red-500/10 text-red-400 border-red-500/20";
+                    plan.feature = "大橋JCTの螺旋ループでの持続G ➔ C1都心の連続急ブラインドS字";
+                    plan.paKey = 'shibaura';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」から流入。素早く本線速度に同期。`, sign: `C1/C2 内回り` },
+                        { action: 'BRANCH', text: `大橋JCTの巨大な地下トンネル螺旋を2回転半登る高負荷旋回。`, sign: `大橋ループ`, color: 'bg-rose-600' },
+                        { action: 'BRANCH', text: `谷町JCTからC1内回りにアタック。霞が関、三宅坂の急コーナー。`, sign: `C1 霞が関`, color: 'bg-red-600' },
+                        { action: 'KEEP', text: `神田橋JCTの直角屈曲をクリアし、再びC2方面へと戻ります。`, sign: `C2 方面` },
+                        { action: 'GOAL', text: `合流に気を付けつつ、至近の「${outIC.name}」より退出。`, sign: `${outIC.name}` }
+                    ];
+                } else {
+                    plan.badge = "マイルド・C2山手トンネル・ストレート周回";
+                    plan.distance = 18.2;
+                    plan.duration = 20;
+                    plan.difficulty = "初級 (超簡単直線トンネル)";
+                    plan.diffColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                    plan.feature = "合流・カーブが日本一少ない山手トンネル内をマイペースに走る安心プラン";
+                    plan.paKey = 'yoyogi';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」からC2山手トンネルへ。`, sign: `C2 内回り` },
+                        { action: 'KEEP', text: `車線変更をせずに真ん中車線をキープして山手トンネル内を直線走行。`, sign: `直進維持` },
+                        { action: 'KEEP', text: `一定の速度と十分な車間距離を保ち、リラックスして運転。`, sign: `安全速度遵守` },
+                        { action: 'GOAL', text: `出口の青い看板「${outIC.name}」が見えたら、ウィンカーを出してスマートに退出。`, sign: `${outIC.name}` }
+                    ];
+                }
+            } else {
+                // 放射線・湾岸エリア向け生成
+                if (activeDrivingStyle === 'nightview') {
+                    plan.badge = "極彩ネオン・湾岸＆お台場レインボーブリッジナイトツアー";
+                    plan.distance = 42.1;
+                    plan.duration = 48;
+                    plan.difficulty = "中級 (お台場周辺周回)";
+                    plan.diffColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                    plan.feature = "お台場のビル群やパレットタウン、東京タワーが重なるSFチックな立体夜景";
+                    plan.paKey = 'tatsumi1';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」から、まずは広い湾岸線へ。`, sign: `B 湾岸線` },
+                        { action: 'BRANCH', text: `有明JCTから11号台場線へ。レインボーブリッジの上から都心の夜景に飛び込みます。`, sign: `11号 レインボーブリッジ`, color: 'bg-pink-600' },
+                        { action: 'KEEP', text: `夜景を眺めながら芝浦PAで一度コーヒータイム。`, sign: `芝浦PA` },
+                        { action: 'BRANCH', text: `C1を経由して9号深川線、または辰巳JCTから再び湾岸線東行きへ戻ります。`, sign: `B 湾岸線方面`, color: 'bg-blue-600' },
+                        { action: 'GOAL', text: `臨海部の心地よい夜風を浴びながら「${outIC.name}」から退出。`, sign: `${outIC.name}` }
+                    ];
+                } else if (activeDrivingStyle === 'sport') {
+                    plan.badge = "アーバン・湾岸高速ハイスピード＆箱崎ロータリーJCT";
+                    plan.distance = 32.8;
+                    plan.duration = 38;
+                    plan.difficulty = "上級 (複雑な箱崎分岐)";
+                    plan.diffColor = "bg-red-500/10 text-red-400 border-red-500/20";
+                    plan.feature = "湾岸線の直線加速から、アトラクションのような箱崎JCTロータリー攻略";
+                    plan.paKey = 'tatsumi1';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」から本線合流、力強く加速。`, sign: `B 湾岸線` },
+                        { action: 'BRANCH', text: `辰巳JCTから9号深川線へ急カーブで分岐。車重移動をコントロール。`, sign: `9号 深川方面`, color: 'bg-rose-600' },
+                        { action: 'BRANCH', text: `箱崎JCT内の立体ぐるぐるループに入り、箱崎ロータリーを回ってC1へ。`, sign: `箱崎ロータリー`, color: 'bg-red-600' },
+                        { action: 'KEEP', text: `C1江戸橋JCT付近の直角カーブ、急車線変更区間をクリア。`, sign: `C1 方面` },
+                        { action: 'GOAL', text: `目的の隣接出口「${outIC.name}」から一般道へ退出。`, sign: `${outIC.name}` }
+                    ];
+                } else {
+                    plan.badge = "マイルド・湾岸線超ワイド＆合流極小クルーズ";
+                    plan.distance = 15.5;
+                    plan.duration = 18;
+                    plan.difficulty = "初級 (最も広い車線)";
+                    plan.diffColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                    plan.feature = "片側4車線の超広幅ハイウェイ。初心者が一番緊張せず走れる王道コース";
+                    plan.paKey = 'heiwajima';
+                    plan.steps = [
+                        { action: 'START', text: `「${inIC.name}入口」から湾岸本線へ。`, sign: `B 湾岸線` },
+                        { action: 'KEEP', text: `一番右（追い越し）と一番左（合流）の車線を避け、真ん中の2車線目を定速走行。`, sign: `定速巡航キープ` },
+                        { action: 'KEEP', text: `東京港トンネルや各PAの案内標識を余裕を持って確認しながら直進。`, sign: `直進` },
+                        { action: 'GOAL', text: `「${outIC.name}」の減速ランプに向けてスムーズに減速・離脱。`, sign: `${outIC.name}` }
+                    ];
+                }
+            }
+
+            // 難易度と特徴表示をアップデート
+            const difficultyBadge = document.getElementById('route-difficulty-badge');
+            difficultyBadge.textContent = plan.difficulty;
+            difficultyBadge.className = `text-xs font-extrabold px-2.5 py-0.5 rounded-md border ${plan.diffColor}`;
+
+            document.getElementById('route-feature-text').textContent = plan.feature;
+
+            // 各種ドライブ表示数値を更新
+            document.getElementById('route-type-badge').textContent = plan.badge;
+            document.getElementById('display-distance').textContent = plan.distance.toFixed(1);
+            document.getElementById('display-shortest-distance').textContent = `（最短距離: ${outIC.shortestDist.toFixed(1)} km）`;
+            document.getElementById('display-duration').textContent = plan.duration;
+
+            document.getElementById('nav-entrance-name').textContent = inIC.name;
+            document.getElementById('nav-entrance-line').textContent = inIC.line;
+            document.getElementById('nav-exit-name').textContent = outIC.name;
+            document.getElementById('nav-exit-line').textContent = `最短経路 ${outIC.shortestDist}km で300円対象`;
+
+            // 分岐ステップの動的HTML構築
+            plan.steps.forEach((step, idx) => {
+                const isStart = step.action === 'START';
+                const isGoal = step.action === 'GOAL';
+                const isBranch = step.action === 'BRANCH';
+
+                let stepIcon = '<i class="fa-solid fa-diamond text-[8px] text-slate-600"></i>';
+                if (isStart) stepIcon = '<i class="fa-solid fa-play text-xs text-blue-400"></i>';
+                if (isGoal) stepIcon = '<i class="fa-solid fa-flag-checkered text-xs text-red-400"></i>';
+                if (isBranch) stepIcon = '<i class="fa-solid fa-code-fork text-xs text-yellow-400 rotate-90"></i>';
+
+                const stepDiv = document.createElement('div');
+                stepDiv.className = "relative mb-4 last:mb-0 group";
+                stepDiv.innerHTML = `
+                    <div class="absolute -left-[24px] top-1 bg-slate-900 border-2 border-slate-800 rounded-full w-5 h-5 flex items-center justify-center z-10 group-hover:border-cyan-500 transition-colors">
+                        ${stepIcon}
+                    </div>
+                    <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-900 hover:border-slate-800 hover:bg-slate-900/30 transition-all">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <span class="text-xs text-slate-200 leading-relaxed">${step.text}</span>
+                            ${step.sign ? `
+                                <div class="flex items-center space-x-1.5 self-start sm:self-auto bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-tight">
+                                    <i class="fa-solid fa-road-barrier"></i>
+                                    <span>${step.sign}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                stepsContainer.appendChild(stepDiv);
+            });
+
+            // おすすめPA表示の更新
+            const paCard = document.getElementById('pa-info-card');
+            const paKey = plan.paKey;
+            if (paKey && PA_DATABASE[paKey]) {
+                const pa = PA_DATABASE[paKey];
+                document.getElementById('pa-name').textContent = pa.name;
+                document.getElementById('pa-line').textContent = pa.line;
+                document.getElementById('pa-desc').textContent = pa.desc;
+                document.getElementById('pa-food').textContent = pa.food;
+                paCard.classList.remove('hidden');
+            } else {
+                paCard.classList.add('hidden');
+            }
+        }
+
+        // --- Gemini API (LLM & Google Search) 連携モジュール ---
+        async function callGeminiAPI(userPrompt, systemPrompt = "", useSearch = false, retries = 3, delay = 1000) {
+            const apiKey = ""; // 自動注入
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }]
+            };
+
+            if (systemPrompt) {
+                payload.systemInstruction = {
+                    parts: [{ text: systemPrompt }]
+                };
+            }
+
+            if (useSearch) {
+                payload.tools = [{ "google_search": {} }];
+            }
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 429 && i < retries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2;
+                            continue;
+                        }
+                        throw new Error(`Gemini API Error: Status ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+                    if (!candidate || !candidate.content?.parts?.[0]?.text) {
+                        throw new Error("Invalid structure returned from Gemini API");
+                    }
+
+                    const text = candidate.content.parts[0].text;
+                    let sources = [];
+
+                    const groundingMetadata = candidate.groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        sources = groundingMetadata.groundingAttributions
+                            .map(attr => ({
+                                uri: attr.web?.uri,
+                                title: attr.web?.title,
+                            }))
+                            .filter(src => src.uri && src.title);
+                    }
+
+                    return { text, sources };
+
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        function parseSimpleMarkdown(text) {
+            let escaped = text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-400 font-extrabold">$1</strong>');
+            escaped = escaped.replace(/^(?:-|•|\*)\s+(.*)$/gm, '<li class="ml-3 list-disc text-slate-300">$1</li>');
+            escaped = escaped.replace(/\n/g, '<br>');
+
+            return escaped;
+        }
+
+        async function triggerRealtimeAiCheck() {
+            const inIC = selectedIC;
+            const outIC = selectedIC.partner;
+            const styleName = document.getElementById('ai-current-style-label').textContent;
+
+            const systemPrompt = "あなたは首都高速道路のドライブ事情に極めて精通したベテランの『AIドライブコンシェルジュ』です。安全運転と紳士的マナーを最優先し、最新の交通規制や各PAの状況を検索・調査してユーザーに教えます。";
+            
+            const userQuery = `【現在の周回予定ルート】
+入口: ${inIC.name} (${inIC.line})
+出口: ${outIC.partner ? outIC.name : '自動生成最寄出口'}
+走行スタイル: ${styleName}
+
+現在、首都高速道路（特に大黒PAや辰巳PA、および上記走行スタイルに関係する路線）で、今夜リアルタイムに発生している「工事・車線規制」「事故・渋滞情報」や「PAの夜間閉鎖/混雑予測」をGoogle Searchを用いて調査し、安全に300円周回ドライブを楽しむための注意点・絶景スポット・お勧めの安全ドライブ走行テクニックをアドバイスしてください。親切でワクワクする語り口調（〜ですよ、〜ですね、など）の日本語で250〜350文字程度で分かりやすくまとめてください。`;
+
+            setAiLoading(true);
+
+            try {
+                const result = await callGeminiAPI(userQuery, systemPrompt, true);
+                renderAiResponse(result.text, result.sources);
+            } catch (err) {
+                console.error(err);
+                renderAiResponse("⚠️ リアルタイム情報の取得に失敗しました。インターネット接続やAPI制限を確認してください。<br>（首都高の週末夜間は、特に大黒PAや辰巳第1PAの不正集会対策に伴う閉鎖要請が突発的に発生しやすいため、現地の電光掲示板にも十分ご注意ください）");
+            } finally {
+                setAiLoading(false);
+            }
+        }
+
+        async function sendQuickQuestion(questionText) {
+            document.getElementById('ai-user-query').value = questionText;
+            submitCustomQuestion();
+        }
+
+        async function submitCustomQuestion() {
+            const queryInput = document.getElementById('ai-user-query');
+            const query = queryInput.value.trim();
+            if (!query) return;
+
+            const inIC = selectedIC;
+            const outIC = selectedIC.partner;
+            const styleName = document.getElementById('ai-current-style-label').textContent;
+            
+            const systemPrompt = "あなたは首都高速道路（首都高）でのドライブに関するあらゆる質問（おすすめのPA、夜景撮影位置、カーブ攻略の注意点、深夜のBGMやドライブの心得など）に答える『AIコンシェルジュ』です。大黒PAや辰巳第1PAの週末の夜間閉鎖や封鎖に関する直近のニュースや公式アナウンス等も考慮してください。";
+            
+            const fullPrompt = `【現在のルート状況】
+入口: ${inIC.name} (${inIC.line})
+出口: ${outIC.name}
+現在の走行スタイル: ${styleName}
+
+ユーザーからの質問: 「${query}」
+
+この走行スタイル・周回ルートの文脈を踏まえ、質問に的確に答えてください。必要に応じてGoogle検索を利用し最新の情報を補足してください。`;
+
+            setAiLoading(true);
+            queryInput.value = ""; 
+
+            try {
+                const result = await callGeminiAPI(fullPrompt, systemPrompt, true);
+                renderAiResponse(result.text, result.sources);
+            } catch (err) {
+                console.error(err);
+                renderAiResponse("⚠️ AI応答の生成中にエラーが発生しました。時間を置いて再度お試しください。");
+            } finally {
+                setAiLoading(false);
+            }
+        }
+
+        function setAiLoading(isLoading) {
+            const btn = document.getElementById('btn-ai-realtime');
+            const btnText = document.getElementById('btn-ai-text');
+            const icon = btn.querySelector('i');
+            const responseBox = document.getElementById('ai-response-box');
+
+            if (isLoading) {
+                btn.disabled = true;
+                btnText.textContent = "AIがリアルタイム調査中...";
+                icon.className = "fa-solid fa-spinner animate-spin text-sm";
+                responseBox.classList.remove('hidden');
+                document.getElementById('ai-text-content').innerHTML = `
+                    <div class="flex items-center gap-2 py-4 text-purple-400">
+                        <i class="fa-solid fa-circle-notch animate-spin"></i>
+                        <span>首都高の最新規制情報・PA状況をウェブ検索中...</span>
+                    </div>
+                `;
+                document.getElementById('ai-sources').classList.add('hidden');
+            } else {
+                btn.disabled = false;
+                btnText.textContent = "現在のルート状況をAIでリアルタイム分析";
+                icon.className = "fa-solid fa-radar text-sm animate-pulse";
+            }
+        }
+
+        function renderAiResponse(text, sources = []) {
+            const responseBox = document.getElementById('ai-response-box');
+            const textContent = document.getElementById('ai-text-content');
+            const sourcesDiv = document.getElementById('ai-sources');
+            const sourcesList = document.getElementById('ai-sources-list');
+
+            responseBox.classList.remove('hidden');
+            textContent.innerHTML = parseSimpleMarkdown(text);
+
+            if (sources && sources.length > 0) {
+                sourcesDiv.classList.remove('hidden');
+                sourcesList.innerHTML = '';
+                
+                const uniqueSources = [];
+                const seenUris = new Set();
+                for (const src of sources) {
+                    if (!seenUris.has(src.uri)) {
+                        seenUris.add(src.uri);
+                        uniqueSources.push(src);
+                    }
+                }
+
+                uniqueSources.slice(0, 4).forEach(src => {
+                    const link = document.createElement('a');
+                    link.href = src.uri;
+                    link.target = "_blank";
+                    link.className = "text-[10px] bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500 text-purple-300 px-2 py-1 rounded-md flex items-center gap-1 transition max-w-[200px] truncate";
+                    link.innerHTML = `
+                        <i class="fa-solid fa-link text-[8px]"></i>
+                        <span>${src.title}</span>
+                    `;
+                    sourcesList.appendChild(link);
+                });
+            } else {
+                sourcesDiv.classList.add('hidden');
+            }
+        }
+
+        function saveCurrentPlan() {
+            const plan = {
+                id: `${selectedIC.id}-${activeDrivingStyle}-${Date.now()}`,
+                entranceId: selectedIC.id,
+                entranceName: selectedIC.name,
+                exitName: selectedIC.partner.name,
+                line: selectedIC.line,
+                style: activeDrivingStyle,
+                styleLabel: activeDrivingStyle === 'nightview' ? '夜景中心' : (activeDrivingStyle === 'sport' ? '走り重視' : '初心者安心'),
+                distance: parseFloat(document.getElementById('display-distance').textContent),
+                duration: parseInt(document.getElementById('display-duration').textContent)
+            };
+
+            let saved = JSON.parse(localStorage.getItem('shutoko_pro_plans') || '[]');
+            
+            if (saved.some(p => p.entranceId === plan.entranceId && p.style === plan.style)) {
+                showToast('このIC・スタイルの計画は既に保存されています！', 'info');
+                return;
+            }
+
+            saved.push(plan);
+            localStorage.setItem('shutoko_pro_plans', JSON.stringify(saved));
+            showToast('ドライブプランをマイリストに保存しました！', 'success');
+            loadSavedPlans();
+        }
+
+        function loadSavedPlans() {
+            const saved = JSON.parse(localStorage.getItem('shutoko_pro_plans') || '[]');
+            const container = document.getElementById('saved-plans-box');
+            const listContainer = document.getElementById('saved-plans-list');
+
+            if (saved.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            listContainer.innerHTML = '';
+
+            saved.forEach(plan => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-950 p-2.5 rounded-lg border border-slate-850 flex items-center justify-between gap-2 hover:border-slate-750 transition cursor-pointer";
+                card.onclick = (e) => {
+                    if (e.target.closest('.btn-delete')) return;
+                    selectIC(plan.entranceId);
+                    setDrivingStyle(plan.style);
+                    showToast('保存したプランをロードしました！', 'success');
+                };
+
+                let styleBadgeClass = "bg-indigo-500/10 text-indigo-300 border-indigo-500/20";
+                if (plan.style === 'sport') styleBadgeClass = "bg-rose-500/10 text-rose-300 border-rose-500/20";
+                if (plan.style === 'beginner') styleBadgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+
+                card.innerHTML = `
+                    <div class="flex-grow min-w-0">
+                        <span class="text-[9px] bg-slate-900 border border-slate-800 text-cyan-400 px-1.5 py-0.5 rounded font-bold">${plan.entranceName} ⇒ ${plan.exitName}</span>
+                        <p class="text-[11px] font-bold text-white truncate mt-1">${plan.line} 周回コース</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-[9px] border px-1.5 py-0.2 rounded font-bold ${styleBadgeClass}">${plan.styleLabel}</span>
+                            <span class="text-[10px] text-slate-500">距離: ${plan.distance}km / 約${plan.duration}分</span>
+                        </div>
+                    </div>
+                    <button class="btn-delete text-slate-500 hover:text-red-400 p-1 rounded transition" onclick="deletePlan('${plan.id}')">
+                        <i class="fa-regular fa-trash-can text-xs"></i>
+                    </button>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function deletePlan(id) {
+            let saved = JSON.parse(localStorage.getItem('shutoko_pro_plans') || '[]');
+            saved = saved.filter(p => p.id !== id);
+            localStorage.setItem('shutoko_pro_plans', JSON.stringify(saved));
+            showToast('プランを削除しました', 'info');
+            loadSavedPlans();
+        }
+
+        function clearSavedPlans() {
+            if (confirm('すべての保存プランをクリアしますか？')) {
+                localStorage.removeItem('shutoko_pro_plans');
+                showToast('保存したすべてのプランを削除しました', 'info');
+                loadSavedPlans();
+            }
+        }
+
+        function copyRouteToClipboard() {
+            const inIC = selectedIC;
+            const outIC = selectedIC.partner;
+            const dist = document.getElementById('display-distance').textContent;
+            const duration = document.getElementById('display-duration').textContent;
+
+            let text = `【首都高300円周回ナビ - プラン】\n`;
+            text += `走行スタイル: ${activeDrivingStyle === 'nightview' ? '極彩ネオン・夜景重視' : (activeDrivingStyle === 'sport' ? 'アーバン・ワインディング重視' : 'マイルド・初心者安心')}\n`;
+            text += `入口IC: ${inIC.name} (${inIC.line})\n`;
+            text += `出口IC: ${outIC.name} (${outIC.line})\n`;
+            text += `最短実営業距離: ${outIC.shortestDist} km (4.3km以下 300円判定適合)\n`;
+            text += `想定走行距離: 約 ${dist} km\n`;
+            text += `想定時間: 約 ${duration} 分\n`;
+            text += `料金区分: ${vehicleType === 'standard' ? '300円 (普通車)' : '280円 (軽/二輪)'}\n\n`;
+            text += `※本ナビは最短距離料金計算の仕組みを適用した、法定速度遵守の安全運転用ルートガイドです。安全第一でお楽しみください。`;
+
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+
+            showToast('プランデータをコピーしました。SNSや同乗者にシェアしましょう！', 'success');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-slate-900 border-emerald-500/30 text-emerald-400';
+            let iconClass = 'fa-solid fa-circle-check';
+            
+            if (type === 'info') {
+                bgClass = 'bg-slate-900 border-cyan-500/30 text-cyan-400';
+                iconClass = 'fa-solid fa-circle-info';
+            }
+
+            toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl border ${bgClass} shadow-2xl transition duration-300 transform translate-y-2 pointer-events-auto`;
+            toast.innerHTML = `
+                <i class="${iconClass}"></i>
+                <span class="text-xs font-bold font-sans">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function toggleHelpModal() {
+            const modal = document.getElementById('modal-help');
+            modal.classList.toggle('hidden');
+        }
+
+        function togglePwaModal() {
+            const modal = document.getElementById('modal-pwa-install');
+            modal.classList.toggle('hidden');
+        }
+
+        // --- PWA (インストール可能かどうか) の制御ロジック ---
+        function checkPwaStatus() {
+            const installBtn = document.getElementById('btn-pwa-install');
+            
+            // iOS かつホーム画面起動ではない(standaloneではない)場合、インストールを促すボタンを表示
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+            if ((isIOS && !isStandalone) || !isStandalone) {
+                installBtn.classList.remove('hidden');
+                installBtn.addEventListener('click', togglePwaModal);
+            }
+        }
+
+        // Android / Chrome 向け標準 PWA インストールハンドラ
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('btn-pwa-install');
+            installBtn.classList.remove('hidden');
+            
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        showToast('インストールに同意いただきありがとうございます！', 'success');
+                    }
+                    deferredPrompt = null;
+                } else {
+                    togglePwaModal();
+                }
+            });
+        });
+
+        document.getElementById('btn-help').addEventListener('click', toggleHelpModal);
+    </script>
+</body>
+</html>
